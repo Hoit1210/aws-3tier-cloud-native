@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS weather_logs (
+    log_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(user_id),
+    region VARCHAR(50) NOT NULL,
+    memo TEXT,
+    log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
