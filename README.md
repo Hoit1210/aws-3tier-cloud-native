@@ -191,4 +191,4 @@ The original project used a self-signed TLS certificate for verification. High a
 
 Detailed architecture evolution, engineering decisions, troubleshooting, evidence screenshots, results, and the transition to the next project are documented in the Notion portfolio.
 
-> Notion link will be added after the final portfolio page is published.
+[View Project 01 Notion Portfolio](https://app.notion.com/p/3af59c94122580ef9a87e99fbef36a77)
