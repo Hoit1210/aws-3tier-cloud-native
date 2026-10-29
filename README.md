@@ -1,194 +1,142 @@
-# AWS 3-Tier Cloud Native Infrastructure
+# Project 01. AWS 3-Tier 클라우드 인프라 구축 및 ECS Fargate 확장
 
-Local WSL2 환경에서 시작한 Python 애플리케이션을 Docker 기반으로 컨테이너화하고, AWS 환경에서 Web / WAS / DB 역할을 분리한 3-Tier 구조로 확장한 개인 프로젝트입니다.
+> **로컬 Python 애플리케이션을 Docker로 컨테이너화하고, AWS 3-Tier 인프라·HTTPS·모니터링을 구성한 뒤 ECS Fargate까지 확장한 개인 프로젝트입니다.**
 
-이후 Nginx Reverse Proxy와 HTTPS를 적용하고 PostgreSQL을 Amazon RDS로 분리했으며, Node Exporter · Prometheus · Grafana 기반 Monitoring Stack을 추가했습니다. 마지막으로 Container Image를 Amazon ECR에 저장하고 ECS Fargate Service/Task 기반 실행 구조까지 확장했습니다.
+## Project Context
 
-> Local WSL2 → Docker → AWS 3-Tier → HTTPS → Monitoring → ECR / ECS Fargate
+WSL2에서 실행하던 애플리케이션을 클라우드에서 운영하려면 실행 환경 표준화, Web/WAS/DB 분리, 네트워크 접근 제어, 관측 수단이 필요합니다. 이 프로젝트에서는 다음 순서로 구조를 발전시켰습니다.
 
-## Architecture Evolution
+**WSL2 → Docker → AWS EC2 + RDS 3-Tier → Nginx HTTPS → Prometheus/Grafana → ECR/ECS Fargate**
+
+- **문제:** 호스트 의존적 실행, 단일 환경에 집중된 구성, 수동 상태 확인
+- **선택:** Docker Compose, Nginx Reverse Proxy, Amazon RDS, Monitoring Stack, 관리형 컨테이너 실행 환경
+- **검증 범위:** 컨테이너 실행, 3-Tier 요청 흐름, HTTPS, 모니터링 인터페이스 접근, ECS Service/Task 실행 및 애플리케이션 직접 접근
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    A[Local WSL2] --> B[Docker Containerization]
-    B --> C[AWS EC2 + RDS 3-Tier]
+    U[Client] -->|HTTPS| N[Nginx Web]
+    N -->|Internal :5000| A[Python WAS]
+    A -->|:5432| R[(Amazon RDS PostgreSQL)]
+    H[EC2 / Host] --> E[Node Exporter]
+    E --> P[Prometheus]
+    P --> G[Grafana]
+```
+
+**단계별 고도화**
+
+```mermaid
+flowchart LR
+    A[Local WSL2] --> B[Docker Compose]
+    B --> C[AWS EC2 + RDS]
     C --> D[Nginx HTTPS]
-    D --> E[Prometheus / Grafana Monitoring]
-    E --> F[ECR + ECS Fargate]
+    D --> E[Monitoring]
+    E --> F[Amazon ECR + ECS Fargate]
 ```
 
-### 3-Tier request flow
-
-```mermaid
-flowchart LR
-    Client --> Nginx[Nginx Web Layer]
-    Nginx --> App[Python WAS :5000]
-    App --> RDS[(Amazon RDS PostgreSQL :5432)]
-```
+> 위 다이어그램은 프로젝트의 단계별 구성과 역할을 설명합니다. 모든 구성 요소가 최종 ECS 단계에서 동일하게 운영되었다는 의미는 아닙니다.
 
 ## Tech Stack
 
-- **AWS**: EC2, RDS PostgreSQL, ECR, ECS Fargate, IAM
-- **Container**: Docker, Docker Compose V2
-- **Web**: Nginx
-- **Backend**: Python `HTTPServer`
-- **Database**: PostgreSQL, `psycopg2-binary`
-- **Monitoring**: Node Exporter, Prometheus, Grafana
-- **Security**: Nginx HTTPS, self-signed certificate for test environment, Security Group, IAM Role
+| 구분 | 기술 | 사용 목적 |
+|---|---|---|
+| AWS | EC2, RDS PostgreSQL, IAM | 인프라 및 DB 분리, AWS 리소스 접근 |
+| Container | Docker, Docker Compose V2 | 실행 환경 표준화 |
+| Web | Nginx, HTTPS | Reverse Proxy 및 TLS 처리 |
+| Backend | Python HTTPServer, psycopg2-binary | 애플리케이션 및 PostgreSQL 연동 |
+| Monitoring | Node Exporter, Prometheus, Grafana | 호스트 지표 수집과 시각화 |
+| Container Platform | ECR, ECS Fargate | 이미지 저장 및 관리형 컨테이너 실행 |
+
+## Core Engineering Decisions
+
+| 문제 | 적용한 기술/방법 | 이유 |
+|---|---|---|
+| 실행 환경에 따른 차이 | Docker / Compose | 배포 및 재현성 개선 |
+| WAS 직접 접근 | Nginx Reverse Proxy | 웹 진입점과 내부 애플리케이션 분리 |
+| 애플리케이션과 DB의 결합 | Amazon RDS | DB 수명주기·접근 경계 분리 |
+| 서버 상태를 수동으로 확인 | Node Exporter + Prometheus + Grafana | 메트릭 기반 관측 환경 마련 |
+| EC2 중심 컨테이너 실행 | ECR + ECS Fargate | 레지스트리와 관리형 런타임 분리 |
+| AWS 자격 증명 노출 위험 | IAM Role | 코드에 장기 액세스 키 저장 지양 |
+
+## Implementation & Validation
+
+### 1. Web / WAS / DB 분리
+- Nginx가 클라이언트의 요청을 받아 내부 Python WAS(`:5000`)로 전달합니다.
+- WAS는 환경 변수로 설정한 PostgreSQL에 연결해 날씨 메모를 조회·등록합니다.
+- 데이터베이스는 `users`, `weather_logs` 테이블과 JOIN 조회를 사용합니다.
+
+### 2. HTTPS 및 접근 경계
+- Nginx에서 HTTP → HTTPS 리다이렉션과 TLS 1.2/1.3을 설정했습니다.
+- 검증 환경에서는 **자체 서명 인증서**를 사용했으므로 브라우저 신뢰 경고가 발생할 수 있습니다.
+- 실서비스용 공인 인증서와 로드 밸런서 기반 TLS 종료까지 구현했다고 주장하지 않습니다.
+
+### 3. Monitoring
+- Node Exporter 지표를 Prometheus가 5초 간격으로 수집하도록 구성했습니다.
+- 모니터링 컨테이너 실행과 Grafana 웹 UI 접근을 확인했습니다.
+- 이 프로젝트에서 운영 수준의 SLO, Alerting, 고도화된 대시보드까지 검증했다고 주장하지 않습니다.
+
+### 4. ECR / ECS Fargate
+- 애플리케이션 이미지를 ECR에 Push하고 ECS Task Definition / Service를 구성했습니다.
+- 검증 당시 Fargate Task 1개, 컨테이너 포트 5000, Public IP를 이용해 직접 접근했습니다.
+- **ALB, Multi-AZ 고가용성, Auto Scaling은 검증 범위에 포함되지 않습니다.**
+- 상세 내용: [ECS 배포 기록](docs/ecs-deployment.md)
+
+## Troubleshooting
+
+| 현상 | 원인 | 해결 |
+|---|---|---|
+| 실행 중인 컨테이너에 외부 요청이 도달하지 않음 | WAS가 컨테이너 내부 `127.0.0.1`에 바인딩 | `0.0.0.0`로 변경 후 재배포 |
+| `KeyError: 'ContainerConfig'` | 구형 Docker Compose와 Docker Engine 호환성 문제 | Compose V2 플러그인 사용 |
+| PostgreSQL 드라이버 로딩 실패 | 이미지 내 네이티브 빌드 의존성 문제 | `psycopg2-binary` 사용 |
+
+상세 과정: [Troubleshooting](docs/troubleshooting.md)
 
 ## Repository Structure
 
 ```text
-.
-├── backend/
-│   ├── app.py
-│   ├── Dockerfile
-│   └── requirements.txt
-├── database/
-│   └── schema.sql
-├── docs/
-│   ├── ecs-deployment.md
-│   └── troubleshooting.md
-├── monitoring/
-│   └── prometheus.yml
-├── nginx/
-│   └── nginx.conf
-├── .env.example
-├── .gitignore
-├── docker-compose.yml
-└── README.md
+backend/            # Python WAS, Dockerfile, requirements
+database/           # SQL schema
+nginx/              # Reverse Proxy 설정
+monitoring/         # Prometheus 수집 설정
+docs/               # ECS 배포 및 트러블슈팅
+docker-compose.yml  # 컨테이너 실행 구성
+.env.example        # 비밀값을 제외한 환경 변수 예시
+README.md
 ```
 
-## Key Engineering Decisions
-
-| Problem | Decision | Purpose |
-|---|---|---|
-| Host-dependent execution | Docker / Compose | Standardize the application runtime |
-| Direct WAS entry point | Nginx Reverse Proxy | Separate web entry point and backend |
-| Application / DB coupling | Amazon RDS | Separate the database lifecycle and access boundary |
-| Manual server inspection | Node Exporter + Prometheus + Grafana | Build a metrics-based monitoring foundation |
-| EC2-centered container operation | ECR + ECS Fargate | Separate image registry from managed container runtime |
-| Static AWS credentials risk | IAM Role | Use role-based AWS resource access |
-
-## Application
-
-The backend provides a simple weather memo board backed by PostgreSQL.
-
-Main behaviors:
-
-- Creates `users` and `weather_logs` tables when needed
-- Reads weather logs using `JOIN`
-- Adds a new weather memo through `/add`
-- Connects to PostgreSQL using environment variables
-- Listens on `0.0.0.0:5000` for container networking
-
-Database credentials are **not stored in source code**.
-
-## Environment Variables
-
-Copy the example file and fill in your own values.
+## Local Execution
 
 ```bash
 cp .env.example .env
-```
-
-```env
-DB_HOST=<RDS_ENDPOINT>
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=<DB_USER>
-DB_PASSWORD=<DB_PASSWORD>
-```
-
-`.env` is excluded through `.gitignore`.
-
-## Run with Docker Compose
-
-This repository intentionally does not include a TLS private key or certificate.
-
-Create a local `ssl/` directory and provide your own test certificate before starting Nginx HTTPS.
-
-```bash
 mkdir -p ssl
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout ssl/nginx.key \
-  -out ssl/nginx.crt \
-  -subj "/CN=localhost"
-```
-
-Start the stack:
-
-```bash
+  -keyout ssl/nginx.key -out ssl/nginx.crt -subj "/CN=localhost"
 docker compose up --build -d
 ```
 
-Services:
+`.env`에 DB 연결 정보를 설정해야 합니다. 이 저장소에는 TLS Private Key, 실제 DB 비밀번호와 AWS Credentials를 포함하지 않습니다.
 
-| Service | Port |
-|---|---:|
-| Nginx | 80 / 443 |
-| Python WAS | internal 5000 |
+| 서비스 | 포트 |
+|---|---|
+| Nginx | 80, 443 |
+| Python WAS | 컨테이너 내부 5000 |
 | Prometheus | 9090 |
 | Grafana | 3000 |
-| Node Exporter | internal 9100 |
+| Node Exporter | 컨테이너 내부 9100 |
 
-> For an Internet-facing production environment, Prometheus and Grafana should not be exposed to `0.0.0.0/0` without additional access controls.
+> 인터넷 공개 환경에서는 Prometheus/Grafana 관리 포트를 전체 인터넷(`0.0.0.0/0`)에 노출하지 않아야 합니다.
 
-## HTTPS Configuration
+## Limitations & Next Step
 
-Nginx handles HTTP → HTTPS redirection and proxies requests to the internal application service.
+- 현재 자료는 프로젝트 당시 검증한 내용을 기록하며, 상시 운영 중인 서비스라고 주장하지 않습니다.
+- 검증 범위에는 고가용성, Auto Scaling, ALB, 운영용 인증서/권한 최소화 검증이 포함되지 않습니다.
+- 다음 단계에서는 외부 AI API와 데이터 흐름에 대한 Secret·접근 통제·장애 격리를 강화했습니다.
 
-The project configuration allows TLS 1.2 and TLS 1.3:
-
-```nginx
-ssl_protocols TLSv1.2 TLSv1.3;
-```
-
-A self-signed certificate was used for project verification, so browser trust warnings were expected. A production deployment should use a trusted certificate such as AWS ACM where applicable.
-
-## Monitoring
-
-```mermaid
-flowchart LR
-    Host[EC2 / Host] --> Exporter[Node Exporter]
-    Exporter --> Prometheus
-    Prometheus --> Grafana
-```
-
-`monitoring/prometheus.yml` configures Prometheus to scrape Node Exporter every 5 seconds.
-
-The retained project evidence verifies that the monitoring containers were running and the Grafana web interface was reachable. This repository does not claim a production-grade dashboard, SLO, or alerting implementation for this project.
-
-## Troubleshooting
-
-Three issues from the actual project are documented in [`docs/troubleshooting.md`](docs/troubleshooting.md):
-
-1. Container port forwarding failure caused by `127.0.0.1` binding
-2. `KeyError: 'ContainerConfig'` caused by legacy Docker Compose compatibility
-3. PostgreSQL driver dependency issue resolved with `psycopg2-binary`
-
-## ECS Fargate Migration
-
-The final stage pushed the application image to Amazon ECR and ran it through an ECS Fargate Service/Task.
-
-See [`docs/ecs-deployment.md`](docs/ecs-deployment.md) for the sanitized deployment flow and the scope that was actually verified.
-
-## Security Notes
-
-The public repository intentionally excludes:
-
-- AWS Access Key / Secret Access Key
-- Database password
-- RDS endpoint used in the original environment
-- AWS Account ID
-- TLS private key
-- `.env`
-- Public infrastructure identifiers that are not necessary for understanding the implementation
-
-The original project used a self-signed TLS certificate for verification. High availability, Auto Scaling, ALB-based routing, ACM-based TLS termination, and formal least-privilege IAM validation were outside the verified scope of this project.
+**Project 01 BUILD → [Project 02 Heimdall — SECURE](https://github.com/Hoit1210/Heimdall-project) → Project 03 OBSERVE & RESPOND → Project 04 AUTOMATE**
 
 ## Portfolio
 
-Detailed architecture evolution, engineering decisions, troubleshooting, evidence screenshots, results, and the transition to the next project are documented in the Notion portfolio.
+[Project 01 Notion Portfolio](https://app.notion.com/p/3af59c94122580ef9a87e99fbef36a77)
 
-[View Project 01 Notion Portfolio](https://app.notion.com/p/3af59c94122580ef9a87e99fbef36a77)
+> GitHub에는 코드와 구성 파일, Notion에는 설계 배경·검증 화면·문제 해결 과정을 정리합니다.
