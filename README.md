@@ -42,6 +42,36 @@ flowchart LR
 
 [클라우드 구성도와 구성 요소 설명](docs/cloud-architecture.md)
 
+## 대표 검증 화면
+
+클라우드 인프라 구축과 운영 점검 과정에서 남긴 실제 실행 화면입니다. 공개용 캡처는 민감정보를 가렸으며, 설명은 화면에서 확인할 수 있는 범위로 작성했습니다.
+
+[전체 검증 화면 5개와 확인 범위](docs/evidence-gallery.md)
+
+### RDS PostgreSQL 연결 확인
+
+애플리케이션에 DB 연결 성공과 RDS 서버 시간이 표시됩니다.
+
+![RDS PostgreSQL 연결 확인](docs/images/01-rds-connection.png)
+
+### AWS 3-Tier 애플리케이션 동작
+
+날씨 메모 입력 폼과 저장된 목록을 확인했습니다. 화면만으로 모든 CRUD 동작을 검증한 것은 아닙니다.
+
+![AWS 3-Tier 애플리케이션 동작](docs/images/02-three-tier-app.png)
+
+### ECS 서비스 및 Task 실행
+
+ECS 클러스터 활성 상태와 서비스의 Task 1/1 실행 상태를 확인했습니다.
+
+![ECS 서비스 및 Task 실행](docs/images/04-ecs-service.png)
+
+### ECS 환경 애플리케이션 동작
+
+ECS 환경에서 애플리케이션 입력 폼과 메모 목록이 표시되는 것을 확인했습니다.
+
+![ECS 환경 애플리케이션 동작](docs/images/05-ecs-app.png)
+
 ## Tech Stack
 
 | 구분 | 기술 | 사용 목적 |
@@ -151,7 +181,7 @@ Project 01 BUILD → [Project 02 Heimdall — SECURE](https://github.com/Hoit121
 
 ## 구축 및 검증 기록
 
-이 섹션의 항목은 [개인 프로젝트 관리 — Project 01 기록](https://app.notion.com/p/3b559c9412258075949de16542d5b774)에 보관된 단계별 캡처 및 설명을 기반으로 합니다. GitHub에는 구성 코드를, Notion에는 당시의 실행 화면을 보관합니다.
+이 섹션의 항목은 [개인 프로젝트 관리 — Project 01 기록](https://app.notion.com/p/3b559c9412258075949de16542d5b774)에 보관된 단계별 캡처 및 설명을 기반으로 합니다. GitHub에는 구성 코드와 공개용 검증 화면을, Notion에는 상세 작업 기록을 보관합니다.
 
 | 단계 | 실제 확인한 내용 | Notion에서 확인할 위치 |
 |---|---|---|
@@ -167,3 +197,4 @@ Project 01 BUILD → [Project 02 Heimdall — SECURE](https://github.com/Hoit121
 진행 기간: 2026년 5월~6월 · 개인 프로젝트.
 
 [구축 및 검증 화면 목록](docs/evidence-gallery.md)
+

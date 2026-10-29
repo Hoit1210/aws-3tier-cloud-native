@@ -1,18 +1,37 @@
 # 구축 및 검증 화면
 
-실제로 작업하면서 보관한 화면은 [노션 프로젝트 기록](https://app.notion.com/p/3b559c9412258075949de16542d5b774)에 있습니다. 아래 순서대로 확인할 수 있습니다.
+프로젝트 진행 당시 노션에 보관한 실행 화면입니다. 캡처에서 확인할 수 있는 결과를 중심으로 정리했습니다. 현재 서비스를 다시 실행해 검증한 기록은 아닙니다.
 
-1. Python WAS 포트 5000 응답
-2. Nginx/WAS Docker Compose 실행
-3. RDS 연결 및 서버 시간 조회
-4. AWS 3-Tier CRUD 실행
-5. 5개 컨테이너 실행
-6. ECR 이미지 등록
-7. ECS Service Active / Task 1/1
-8. HTTPS 연결
-9. ECR 접근용 IAM Role
-10. Grafana 웹 화면
-11. RDS 저장·조회
-12. ECS 애플리케이션 최종 응답
+공개용 사본에는 AWS 계정 식별자, 공인 IP, 인증 토큰 등 노출을 피해야 하는 부분을 불투명하게 가렸습니다. localhost·루프백 주소와 문서용 테스트 주소는 유지했습니다.
 
-이미지 원본을 아직 GitHub에 업로드한 상태는 아닙니다. 현재는 노션 기록으로 연결합니다.
+## RDS PostgreSQL 연결 확인
+
+애플리케이션에 DB 연결 성공과 RDS 서버 시간이 표시됩니다.
+
+![RDS PostgreSQL 연결 확인](images/01-rds-connection.png)
+
+## AWS 3-Tier 애플리케이션 동작
+
+날씨 메모 입력 폼과 저장된 목록을 확인했습니다. 화면만으로 모든 CRUD 동작을 검증한 것은 아닙니다.
+
+![AWS 3-Tier 애플리케이션 동작](images/02-three-tier-app.png)
+
+## Grafana 접속 화면
+
+Grafana 로그인 페이지 접근 화면입니다. 지표 수집이나 대시보드 구성을 입증하는 화면은 아닙니다.
+
+![Grafana 접속 화면](images/03-grafana.png)
+
+## ECS 서비스 및 Task 실행
+
+ECS 클러스터 활성 상태와 서비스의 Task 1/1 실행 상태를 확인했습니다.
+
+![ECS 서비스 및 Task 실행](images/04-ecs-service.png)
+
+## ECS 환경 애플리케이션 동작
+
+ECS 환경에서 애플리케이션 입력 폼과 메모 목록이 표시되는 것을 확인했습니다.
+
+![ECS 환경 애플리케이션 동작](images/05-ecs-app.png)
+
+[프로젝트 설명으로 돌아가기](../README.md)
