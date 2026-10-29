@@ -1,56 +1,21 @@
-# ECS Fargate Deployment Notes
+# ECS Fargate 배포
 
-This project was evolved from an EC2-hosted Docker Compose environment to an AWS-managed container runtime using ECR and ECS Fargate.
+EC2 환경에서 빌드한 Docker 이미지를 ECR에 등록하고 ECS Fargate에서 실행했습니다.
 
-## Deployment flow
-
-```text
-Local/EC2 Docker Image
-        ↓
-Amazon ECR
-        ↓
-ECS Task Definition
-        ↓
-ECS Service
-        ↓
-Fargate Task
-        ↓
-Application :5000
+```mermaid
+flowchart LR
+  A[Docker Image] --> B[ECR]
+  B --> C[ECS Task Definition]
+  C --> D[ECS Service]
+  D --> E[Fargate Task]
 ```
 
-## ECR login
+검증 당시 실행 유형은 Fargate, Task Family는 weather-task, 컨테이너 이름은 app, 포트는 5000, Task 수는 1개였습니다. Public IP로 직접 접근했으며 Load Balancer는 사용하지 않았습니다.
 
-Use an IAM role attached to the EC2 instance instead of embedding long-lived AWS access keys in the application.
+EC2의 IAM Role을 이용해 ECR 인증을 진행했습니다.
 
-```bash
-aws ecr get-login-password --region ap-northeast-2 \
-  | docker login --username AWS --password-stdin \
-    <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com
-```
+노션에서 ECR 이미지 등록, ECS Service Active, Task 1/1 및 애플리케이션 응답 화면을 확인할 수 있습니다.
 
-## Image push
+[구축 기록](https://app.notion.com/p/3b559c9412258075949de16542d5b774)
 
-```bash
-docker build -t weather-app ./backend
-
-docker tag weather-app:latest \
-  <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/weather-app:latest
-
-docker push \
-  <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/weather-app:latest
-```
-
-## ECS configuration used in the project
-
-- Launch type: AWS Fargate
-- Task family: `weather-task`
-- Container name: `app`
-- Container port: `5000`
-- Desired task count: `1`
-- Image source: Amazon ECR private repository
-- Public IP: enabled during the project verification stage
-- Load balancer: not used during the direct endpoint verification stage
-
-## Portfolio note
-
-The project verified ECS Service/Task execution and direct application access. High availability, Auto Scaling, load balancing, and production-grade TLS termination were not part of this project scope.
+ALB, Multi-AZ, Auto Scaling 및 운영 환경 TLS 처리는 이번 검증에 포함되지 않았습니다.
