@@ -140,3 +140,23 @@ docker compose up --build -d
 [Project 01 Notion Portfolio](https://app.notion.com/p/3af59c94122580ef9a87e99fbef36a77)
 
 > GitHub에는 코드와 구성 파일, Notion에는 설계 배경·검증 화면·문제 해결 과정을 정리합니다.
+
+
+---
+
+## 실제 구축·검증 증거 (Notion 연계)
+
+이 섹션의 항목은 **[개인 프로젝트 관리 — Project 01 기록](https://app.notion.com/p/3b559c9412258075949de16542d5b774)**에 보관된 단계별 캡처 및 설명을 기반으로 합니다. GitHub에는 구성 코드를, Notion에는 당시의 실행 화면을 보관합니다.
+
+| 단계 | 실제 확인한 내용 | Notion에서 확인할 위치 |
+|---|---|---|
+| 로컬 웹 환경 | Python WAS 5000 포트 응답 | Architecture Evolution → Phase 1 |
+| 컨테이너화 | Nginx와 Python WAS의 Docker Compose 실행 | Phase 2 |
+| AWS 3-Tier | 애플리케이션에서 RDS 연결, DB Server Time 조회, 데이터 저장 및 조회 | Phase 3 / Result → Verification |
+| HTTPS | 자체 서명 인증서 적용 후 HTTPS Endpoint 접근 | Infrastructure & Security → HTTPS |
+| 모니터링 | 5개 컨테이너 실행 및 Grafana 웹 화면 접근 | Phase 4 / Observability |
+| 컨테이너 고도화 | ECR 이미지 저장, ECS Service Active / Task 1/1, ECS 애플리케이션 접근 | Phase 5 / Result → Verification |
+
+**구성도 해석:** 위쪽 3-Tier 다이어그램은 EC2 중심으로 구현한 Web/WAS/RDS 구조이고, ECR → ECS Fargate는 그다음 단계에서 진행한 **별도 실행 구조의 확장**입니다. 처음부터 ALB 또는 Multi-AZ를 운영한 것으로 해석하지 않습니다.
+
+**진행 기간:** 2026년 5월~6월 · 개인 프로젝트 (노션에 기록된 기간과 역할 기준).
