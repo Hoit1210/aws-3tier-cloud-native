@@ -165,3 +165,5 @@ Project 01 BUILD → [Project 02 Heimdall — SECURE](https://github.com/Hoit121
 구성도 해석: 위쪽 3-Tier 다이어그램은 EC2 중심으로 구현한 Web/WAS/RDS 구조이고, ECR → ECS Fargate는 그다음 단계에서 진행한 별도 실행 구조의 확장입니다. 처음부터 ALB 또는 Multi-AZ를 운영한 것으로 해석하지 않습니다.
 
 진행 기간: 2026년 5월~6월 · 개인 프로젝트.
+
+[구축 및 검증 화면 목록](docs/evidence-gallery.md)
